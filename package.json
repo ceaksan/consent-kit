@@ -1,0 +1,27 @@
+{
+  "name": "@ceaksan/consent-kit",
+  "version": "0.1.0",
+  "description": "Google Consent Mode v2 banner for Astro sites: consent defaults before the tag manager, a cookie inventory the UI and the policy page share, and a theme driven by the host site's tokens.",
+  "license": "MIT",
+  "type": "module",
+  "files": [
+    "src"
+  ],
+  "exports": {
+    "./ConsentInit.astro": "./src/ConsentInit.astro",
+    "./ConsentBanner.astro": "./src/ConsentBanner.astro",
+    "./GtmHead.astro": "./src/GtmHead.astro",
+    "./GtmNoscript.astro": "./src/GtmNoscript.astro",
+    "./cookie-inventory": "./src/cookie-inventory.ts",
+    "./types": "./src/types.ts",
+    "./theme.css": "./src/theme.css"
+  },
+  "peerDependencies": {
+    "astro": "^5",
+    "vanilla-cookieconsent": "^3"
+  },
+  "devDependencies": {
+    "astro": "^5.18.2",
+    "vanilla-cookieconsent": "^3.1.0"
+  }
+}

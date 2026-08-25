@@ -1,0 +1,233 @@
+---
+/**
+ * The banner and the preferences dialog. Renders nothing itself until the script runs,
+ * so it can sit anywhere in the body.
+ *
+ * Copy and the cookie list are props: wording is not portable between sites, and a
+ * shared cookie list would claim cookies a site never writes.
+ */
+import type { MeasurementCookie } from './cookie-inventory';
+import type { ConsentCopy } from './types';
+
+interface Props {
+  /** Language tag for the copy being passed in. One language per render. */
+  lang: string;
+  copy: ConsentCopy;
+  policyUrl: string;
+  policyLabel: string;
+  /** The cookies the analytics category writes. Drives autoClear and the table. */
+  cookies: MeasurementCookie[];
+  /**
+   * Class on <html> that means dark. The library themes itself off `cc--darkmode`,
+   * which this mirrors rather than guessing from prefers-color-scheme, since the host
+   * site's own resolver owns the class.
+   */
+  darkClass?: string;
+}
+
+const { lang, copy, policyUrl, policyLabel, cookies, darkClass = 'dark' } = Astro.props;
+
+const config = {
+  lang,
+  policyUrl,
+  policyLabel,
+  darkClass,
+  banner: copy.banner,
+  preferences: copy.preferences,
+  cookies: cookies.map((cookie) => ({
+    name: cookie.name,
+    // RegExp does not survive JSON, so the pattern crosses as source + flags.
+    pattern: { source: cookie.pattern.source, flags: cookie.pattern.flags },
+    vendor: cookie.vendor,
+    domain: cookie.domain,
+    duration: cookie.duration,
+  })),
+};
+---
+<script type="application/json" id="cc-config" is:inline set:html={JSON.stringify(config)}></script>
+
+<script>
+  import * as CookieConsent from 'vanilla-cookieconsent';
+  import 'vanilla-cookieconsent/dist/cookieconsent.css';
+  import { shortDuration } from './cookie-inventory';
+
+  declare global {
+    interface Window {
+      dataLayer: Record<string, unknown>[];
+      gtag: (...args: unknown[]) => void;
+    }
+  }
+  window.dataLayer ??= [];
+
+  const raw = document.getElementById('cc-config')?.textContent;
+  if (raw) {
+    const cfg = JSON.parse(raw);
+    const p = cfg.preferences;
+    const cookies = cfg.cookies as {
+      name: string;
+      pattern: { source: string; flags: string };
+      vendor: string;
+      domain: string;
+      duration: { amount: number; unit: 'minute' | 'hour' | 'day' | 'year' };
+    }[];
+
+    // ConsentInit publishes this shim before the tag manager loads precisely so the
+    // rest of the page shares one dataLayer contract. A second local copy would drift
+    // the moment either side changed how it pushes.
+    const gtag = window.gtag;
+
+    // Decisions go to a cookieless tool, not to the analytics consent switches off:
+    // a tool that consent disables cannot report the visitor who disabled it. These
+    // push onto the dataLayer; the tag that forwards them must NOT carry a consent
+    // condition, or consent_rejected disappears.
+    let firstDecisionSent = false;
+
+    const track = (event: string) => {
+      window.dataLayer.push({ event });
+    };
+
+    // The banner reappears on every pageview until a decision is made, so the raw
+    // impression count is per pageview, not per visitor. Undecided browsing would
+    // inflate the denominator and make the acceptance rate look far worse than it is.
+    const oncePerSession = (key: string) => {
+      try {
+        if (sessionStorage.getItem(key)) return false;
+        sessionStorage.setItem(key, '1');
+        return true;
+      } catch {
+        // Storage blocked: over-count rather than lose the signal entirely.
+        return true;
+      }
+    };
+
+    const syncConsent = () => {
+      const granted = CookieConsent.acceptedCategory('analytics');
+      gtag('consent', 'update', { analytics_storage: granted ? 'granted' : 'denied' });
+      window.dataLayer.push({
+        event: 'consent_update',
+        consent_analytics: granted ? 'granted' : 'denied',
+      });
+    };
+
+    const syncTheme = () => {
+      document.documentElement.classList.toggle(
+        'cc--darkmode',
+        document.documentElement.classList.contains(cfg.darkClass),
+      );
+    };
+    syncTheme();
+    new MutationObserver(syncTheme).observe(document.documentElement, {
+      attributes: true,
+      attributeFilter: ['class'],
+    });
+
+    CookieConsent.run({
+      autoShow: true,
+      disablePageInteraction: false,
+      guiOptions: {
+        // Accept and reject stay equally weighted. Refusal has to be as easy as
+        // acceptance, and a banner that leans is not worth the measurement it buys.
+        consentModal: { layout: 'box inline', position: 'bottom left', equalWeightButtons: true },
+        preferencesModal: { layout: 'box', equalWeightButtons: true },
+      },
+      categories: {
+        necessary: { enabled: true, readOnly: true },
+        analytics: {
+          enabled: false,
+          autoClear: {
+            cookies: cookies.map((cookie) => ({
+              name: new RegExp(cookie.pattern.source, cookie.pattern.flags),
+            })),
+          },
+        },
+      },
+      language: {
+        default: cfg.lang,
+        translations: {
+          [cfg.lang]: {
+            consentModal: {
+              title: cfg.banner.title,
+              description: cfg.banner.description,
+              acceptAllBtn: cfg.banner.acceptAll,
+              acceptNecessaryBtn: cfg.banner.acceptNecessary,
+              showPreferencesBtn: cfg.banner.showPreferences,
+              footer: `<a href="${cfg.policyUrl}">${cfg.policyLabel}</a>`,
+            },
+            preferencesModal: {
+              title: p.title,
+              acceptAllBtn: p.acceptAll,
+              acceptNecessaryBtn: p.acceptNecessary,
+              savePreferencesBtn: p.savePreferences,
+              closeIconLabel: p.close,
+              serviceCounterLabel: p.serviceCounterLabel,
+              sections: [
+                {
+                  title: p.intro.title,
+                  description: `${p.intro.description} <a href="${cfg.policyUrl}">${cfg.policyLabel}</a>`,
+                },
+                {
+                  title: p.necessary.title,
+                  description: p.necessary.description,
+                  linkedCategory: 'necessary',
+                },
+                {
+                  title: p.analytics.title,
+                  description: p.analytics.description,
+                  linkedCategory: 'analytics',
+                  cookieTable: {
+                    headers: {
+                      name: p.table.name,
+                      domain: p.table.domain,
+                      expiration: p.table.expiration,
+                      desc: p.table.description,
+                    },
+                    body: cookies.map((cookie) => ({
+                      name: cookie.name,
+                      domain: cookie.domain,
+                      expiration: shortDuration(cookie.duration),
+                      desc: cookie.vendor,
+                    })),
+                  },
+                },
+              ],
+            },
+          },
+        },
+      },
+      onModalShow: ({ modalName }) => {
+        if (modalName === 'preferencesModal') {
+          track('consent_preferences_opened');
+        } else if (oncePerSession('cc_shown')) {
+          track('consent_banner_shown');
+        }
+      },
+      onFirstConsent: () => {
+        syncConsent();
+        firstDecisionSent = true;
+        track(CookieConsent.acceptedCategory('analytics') ? 'consent_accepted' : 'consent_rejected');
+      },
+      onChange: () => {
+        syncConsent();
+        // Guard in case a version fires onChange alongside onFirstConsent; the first
+        // decision must not be counted twice.
+        if (firstDecisionSent) {
+          firstDecisionSent = false;
+          return;
+        }
+        track(CookieConsent.acceptedCategory('analytics') ? 'consent_accepted' : 'consent_revoked');
+      },
+    });
+
+    // Lets a footer or a policy page reveal its "change preferences" control only
+    // where the banner actually runs.
+    document.documentElement.dataset.cc = 'ready';
+
+    document.addEventListener('click', (e) => {
+      const el = (e.target as HTMLElement | null)?.closest('[data-cc="show-preferences"]');
+      if (el) {
+        e.preventDefault();
+        CookieConsent.showPreferences();
+      }
+    });
+  }
+</script>

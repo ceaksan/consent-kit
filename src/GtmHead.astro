@@ -1,0 +1,23 @@
+---
+/**
+ * The Google Tag Manager loader.
+ *
+ * Must render after ConsentInit so the consent defaults are already on the dataLayer
+ * when the container loads. A container that loads first fires its tags once with no
+ * consent state, which is exactly the leak the banner exists to prevent.
+ */
+interface Props {
+  containerId: string;
+}
+
+const { containerId } = Astro.props;
+---
+<!-- Google Tag Manager -->
+<script is:inline define:vars={{ containerId }}>
+(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':
+new Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0],
+j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
+'https://www.googletagmanager.com/gtm.js?id='+i+dl;f.parentNode.insertBefore(j,f);
+})(window,document,'script','dataLayer',containerId);
+</script>
+<!-- End Google Tag Manager -->

@@ -1,0 +1,59 @@
+---
+/**
+ * Google Consent Mode v2 defaults. MUST render before the tag manager loader,
+ * otherwise tags fire once with no consent state and the first pageview leaks.
+ *
+ * Also publishes `window.gtag` so the rest of the page shares one dataLayer contract
+ * instead of each script defining its own shim.
+ */
+interface Props {
+  /**
+   * Sites that run advertising set this to false and grant the ad_* signals from
+   * their own banner. Left true, the three ad signals stay denied for good and the
+   * banner never touches them.
+   */
+  adSignalsAlwaysDenied?: boolean;
+  /** How long the tag manager holds tags waiting for an update, in milliseconds. */
+  waitForUpdate?: number;
+}
+
+const { adSignalsAlwaysDenied = true, waitForUpdate = 500 } = Astro.props;
+---
+<script is:inline define:vars={{ adSignalsAlwaysDenied, waitForUpdate }}>
+  (function () {
+    window.dataLayer = window.dataLayer || [];
+    function gtag() { window.dataLayer.push(arguments); }
+    window.gtag = window.gtag || gtag;
+
+    gtag('consent', 'default', {
+      ad_storage: 'denied',
+      ad_user_data: 'denied',
+      ad_personalization: 'denied',
+      analytics_storage: 'denied',
+      functionality_storage: 'granted',
+      personalization_storage: 'granted',
+      security_storage: 'granted',
+      wait_for_update: waitForUpdate,
+    });
+    if (adSignalsAlwaysDenied) {
+      gtag('set', 'ads_data_redaction', true);
+    }
+    gtag('set', 'url_passthrough', true);
+
+    // Returning visitor: replay the stored decision synchronously so the first
+    // pageview of the session is measured instead of being dropped by the wait.
+    try {
+      var raw = document.cookie.match(/(?:^|;\s*)cc_cookie=([^;]*)/);
+      if (raw) {
+        var saved = JSON.parse(decodeURIComponent(raw[1]));
+        var accepted = (saved && saved.categories) || [];
+        if (accepted.indexOf('analytics') !== -1) {
+          gtag('consent', 'update', { analytics_storage: 'granted' });
+          window.dataLayer.push({ event: 'consent_restored', consent_analytics: 'granted' });
+        }
+      }
+    } catch (e) {
+      // Malformed or blocked cookie: stay denied. The banner will ask again.
+    }
+  })();
+</script>

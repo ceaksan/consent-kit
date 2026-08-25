@@ -1,0 +1,144 @@
+/**
+ * A border-defined, zero-radius, shadowless skin for vanilla-cookieconsent.
+ *
+ * The library ships a rounded, shadowed, grey theme that belongs to no site in
+ * particular, so a banner using it reads as a vendor widget bolted onto the page.
+ * This maps the library's own custom properties onto a `--consent-*` contract that
+ * the host site fills in from its design tokens. Every variable has a fallback, so
+ * the file is usable before any of them are defined.
+ *
+ * Accept and reject are styled identically on purpose. The accent is spent on the
+ * title rule and the policy link, never on one of the two choices.
+ *
+ * Import once per site, then alias the contract, e.g.
+ *
+ *   :root {
+ *     --consent-surface: var(--my-card);
+ *     --consent-accent: var(--my-primary);
+ *   }
+ */
+
+#cc-main {
+  --cc-font-family: var(--consent-font, ui-monospace, SFMono-Regular, Menlo, monospace);
+  --cc-modal-border-radius: var(--consent-radius, 0);
+  --cc-btn-border-radius: var(--consent-radius, 0);
+  --cc-pm-toggle-border-radius: var(--consent-radius, 0);
+
+  --cc-bg: var(--consent-surface, #ffffff);
+  --cc-primary-color: var(--consent-text, #111111);
+  --cc-secondary-color: var(--consent-text-muted, #444444);
+  --cc-link-color: var(--consent-accent, #005ded);
+  --cc-separator-border-color: var(--consent-border, #d0d0d0);
+  --cc-overlay-bg: var(--consent-overlay, rgb(0 0 0 / 0.7));
+
+  /* The resting fill is deliberately strong: at a quieter one the two choices stop
+     reading as buttons against the panel. Hover fills with the accent, and both
+     choices share it, so the accent still favours neither. */
+  --cc-btn-primary-bg: var(--consent-button-surface, #ececec);
+  --cc-btn-primary-color: var(--consent-text, #111111);
+  --cc-btn-primary-border-color: var(--consent-button-border, #8c8c8c);
+  --cc-btn-primary-hover-bg: var(--consent-accent, #005ded);
+  --cc-btn-primary-hover-color: var(--consent-accent-text, #ffffff);
+  --cc-btn-primary-hover-border-color: var(--consent-accent, #005ded);
+
+  --cc-btn-secondary-bg: var(--consent-button-surface, #ececec);
+  --cc-btn-secondary-color: var(--consent-text, #111111);
+  --cc-btn-secondary-border-color: var(--consent-button-border, #8c8c8c);
+  --cc-btn-secondary-hover-bg: var(--consent-accent, #005ded);
+  --cc-btn-secondary-hover-color: var(--consent-accent-text, #ffffff);
+  --cc-btn-secondary-hover-border-color: var(--consent-accent, #005ded);
+
+  --cc-cookie-category-block-bg: var(--consent-surface-low, #f4f4f4);
+  --cc-cookie-category-block-border: var(--consent-border, #d0d0d0);
+  --cc-cookie-category-block-hover-bg: var(--consent-surface-high, #e6e6e6);
+  --cc-cookie-category-block-hover-border: var(--consent-border, #d0d0d0);
+  --cc-cookie-category-expanded-block-bg: var(--consent-surface-lowest, #fafafa);
+  --cc-cookie-category-expanded-block-hover-bg: var(--consent-surface-low, #f4f4f4);
+  --cc-section-category-border: var(--consent-border, #d0d0d0);
+
+  --cc-toggle-on-bg: var(--consent-accent, #005ded);
+  --cc-toggle-off-bg: var(--consent-surface-high, #e6e6e6);
+  --cc-toggle-readonly-bg: var(--consent-surface-low, #f4f4f4);
+  --cc-toggle-on-knob-bg: var(--consent-surface-lowest, #fafafa);
+  --cc-toggle-off-knob-bg: var(--consent-text, #111111);
+  --cc-toggle-readonly-knob-bg: var(--consent-text-muted, #444444);
+
+  --cc-footer-bg: var(--consent-surface-lowest, #fafafa);
+  --cc-footer-color: var(--consent-text-muted, #444444);
+  --cc-footer-border-color: var(--consent-border, #d0d0d0);
+}
+
+/* The class is doubled on purpose. The library's own `#cc-main .cm` rule sets the
+   shadow at the same specificity, and its stylesheet is injected by the script at
+   runtime, so it lands after this file and wins on source order. */
+#cc-main .cm.cm,
+#cc-main .pm.pm {
+  border: 1px solid var(--consent-border, #d0d0d0);
+  box-shadow: none;
+}
+
+#cc-main .cm__title,
+#cc-main .pm__title {
+  font-size: 0.95rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+#cc-main .cm__title::before,
+#cc-main .pm__title::before {
+  /* Non-breaking space: the preferences title is a flex row, which collapses a
+     trailing plain space and jams the rule against the heading. */
+  content: var(--consent-title-rule, "//\00a0");
+  color: var(--consent-accent, #005ded);
+}
+
+#cc-main .cm__desc {
+  font-size: 0.8125rem;
+  line-height: 1.55;
+}
+
+/* The library animates a gradient underline from zero to full width on hover. Most
+   sites do not do that anywhere else, so the underline is made static and only its
+   colour moves.
+
+   The attribute selector is load-bearing: the library's own `#cc-main a` rule sits at
+   the same specificity and its stylesheet lands later. */
+#cc-main a[href] {
+  background-image: none;
+  transition: text-decoration-color 0.15s ease;
+  color: var(--consent-accent, #005ded);
+  text-decoration: underline;
+  text-decoration-thickness: 1px;
+  text-underline-offset: 0.2em;
+  text-decoration-color: color-mix(in srgb, var(--consent-accent, #005ded) 35%, transparent);
+}
+#cc-main a[href]:hover {
+  background-size: 0 1px;
+  color: var(--consent-accent, #005ded);
+  text-decoration-color: var(--consent-accent, #005ded);
+}
+
+#cc-main .cm__btn,
+#cc-main .pm__btn {
+  border-width: 1px;
+  border-style: solid;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+}
+
+/* Settings is a third path, not a third choice: demoting it to a link keeps the two
+   consent options equally weighted while removing a competing button. */
+#cc-main .cm__btn[data-role="show"] {
+  background: none;
+  border-color: transparent;
+  padding: 0.35rem 0;
+  font-weight: 400;
+  font-size: 0.8125rem;
+  color: var(--consent-text-muted, #444444);
+  text-decoration: underline;
+  text-underline-offset: 0.2em;
+}
+#cc-main .cm__btn[data-role="show"]:hover {
+  background: none;
+  border-color: transparent;
+  color: var(--consent-text, #111111);
+}

@@ -1,0 +1,15 @@
+---
+/**
+ * The JavaScript-disabled fallback. Ships with GtmHead, never on its own: a layout
+ * carrying only this one loads the container for nobody but the visitors without
+ * JavaScript, which is how a whole route can go unmeasured without anything failing.
+ */
+interface Props {
+  containerId: string;
+}
+
+const { containerId } = Astro.props;
+---
+<!-- Google Tag Manager (noscript) -->
+<noscript><iframe src={`https://www.googletagmanager.com/ns.html?id=${containerId}`} height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
+<!-- End Google Tag Manager (noscript) -->
