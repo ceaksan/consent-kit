@@ -17,7 +17,7 @@
     "./theme.css": "./src/theme.css"
   },
   "peerDependencies": {
-    "astro": "^5",
+    "astro": "^5 || ^6 || ^7",
     "vanilla-cookieconsent": "^3"
   },
   "devDependencies": {
