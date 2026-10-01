@@ -203,17 +203,18 @@ const config = {
       },
       onFirstConsent: () => {
         syncConsent();
+        // Guard in case a version fires onChange in the same call as onFirstConsent; the
+        // first decision must not be counted twice. Cleared on the next microtask: 3.1.0
+        // never fires that onChange, and a flag left set would swallow the next real change.
         firstDecisionSent = true;
+        queueMicrotask(() => {
+          firstDecisionSent = false;
+        });
         track(CookieConsent.acceptedCategory('analytics') ? 'consent_accepted' : 'consent_rejected');
       },
       onChange: () => {
         syncConsent();
-        // Guard in case a version fires onChange alongside onFirstConsent; the first
-        // decision must not be counted twice.
-        if (firstDecisionSent) {
-          firstDecisionSent = false;
-          return;
-        }
+        if (firstDecisionSent) return;
         track(CookieConsent.acceptedCategory('analytics') ? 'consent_accepted' : 'consent_revoked');
       },
     });
