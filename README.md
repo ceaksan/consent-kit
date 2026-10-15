@@ -125,7 +125,7 @@ stale value cannot survive in the tag manager's data model:
 
 | Key                                        | Value                                                                                                                                      |
 | ------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------ |
-| `is_landing`                               | `true` on the page that showed the banner first in this session                                                                            |
+| `is_landing`                               | `true` on the page that showed the banner first in this session, up to and including that page's first decision or undecided exit; later pushes (a changed decision, a decision after a bfcache restore) report `false`                                                                            |
 | `click_source`                             | landing only: `google_ads` (`gclid`, `gbraid`, `wbraid`), `meta` (`fbclid`), `microsoft_ads` (`msclkid`), else `none`; `unknown` elsewhere |
 | `utm_source`, `utm_medium`, `utm_campaign` | landing only, lowercased; `null` when absent, over 100 characters or containing `@`                                                        |
 

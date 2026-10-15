@@ -90,6 +90,10 @@ const config = {
     let shownHere = false;
     let decidedHere = false;
     let leftSent = false;
+    // Closed by the landing page's first terminal push (first decision or the
+    // undecided exit), so one impression yields exactly one landing outcome; a
+    // later change or a decision after a bfcache restore reports as not landing.
+    let landingClosed = false;
 
     const CLICK_IDS: [string, string][] = [
       ['gclid', 'google_ads'],
@@ -105,7 +109,7 @@ const config = {
     };
 
     const landingContext = () => {
-      if (!shownHere) {
+      if (!shownHere || landingClosed) {
         return { is_landing: false, click_source: 'unknown', utm_source: null, utm_medium: null, utm_campaign: null };
       }
       const q = new URLSearchParams(location.search);
@@ -119,8 +123,9 @@ const config = {
       };
     };
 
-    const track = (event: string) => {
+    const track = (event: string, terminal = false) => {
       window.dataLayer.push({ event, ...landingContext() });
+      if (terminal) landingClosed = true;
     };
 
     // The banner reappears on every pageview until a decision is made, so the raw
@@ -249,7 +254,7 @@ const config = {
         queueMicrotask(() => {
           firstDecisionSent = false;
         });
-        track(CookieConsent.acceptedCategory('analytics') ? 'consent_accepted' : 'consent_rejected');
+        track(CookieConsent.acceptedCategory('analytics') ? 'consent_accepted' : 'consent_rejected', true);
       },
       onChange: () => {
         syncConsent();
@@ -263,7 +268,7 @@ const config = {
     window.addEventListener('pagehide', () => {
       if (!shownHere || decidedHere || leftSent) return;
       leftSent = true;
-      track('consent_banner_left_undecided');
+      track('consent_banner_left_undecided', true);
     });
 
     // Lets a footer or a policy page reveal its "change preferences" control only
