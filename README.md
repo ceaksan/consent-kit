@@ -73,16 +73,16 @@ import { COOKIES, COPY } from '../config/consent';
 ### The cookie list
 
 ```ts
-import type { MeasurementCookie } from '@ceaksan/consent-kit/cookie-inventory';
+import type { MeasurementCookie } from "@ceaksan/consent-kit/cookie-inventory";
 
 export const COOKIES: MeasurementCookie[] = [
   {
-    name: '_ga',
+    name: "_ga",
     pattern: /^_ga$/,
-    vendor: 'Google Analytics 4',
-    domain: '.example.com',
-    duration: { amount: 2, unit: 'year' },
-    purpose: 'pageviewStats',
+    vendor: "Google Analytics 4",
+    domain: ".example.com",
+    duration: { amount: 2, unit: "year" },
+    purpose: "pageviewStats",
   },
 ];
 ```
@@ -111,13 +111,27 @@ Pass `darkClass` if the site names it something else.
 
 ## Events
 
-| Event | When |
-|---|---|
-| `consent_banner_shown` | banner shown, once per session |
-| `consent_preferences_opened` | preferences dialog opened |
-| `consent_accepted` | analytics granted |
-| `consent_rejected` | first decision was a refusal |
-| `consent_revoked` | previously granted, now denied |
+| Event                           | When                                                                           |
+| ------------------------------- | ------------------------------------------------------------------------------ |
+| `consent_banner_shown`          | banner shown, once per session                                                 |
+| `consent_preferences_opened`    | preferences dialog opened                                                      |
+| `consent_accepted`              | analytics granted                                                              |
+| `consent_rejected`              | first decision was a refusal                                                   |
+| `consent_revoked`               | previously granted, now denied                                                 |
+| `consent_banner_left_undecided` | the page that showed the banner was left (`pagehide`) without a decision, once |
+
+Every event above carries the landing context, all five keys on every push so a
+stale value cannot survive in the tag manager's data model:
+
+| Key                                        | Value                                                                                                                                      |
+| ------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------ |
+| `is_landing`                               | `true` on the page that showed the banner first in this session                                                                            |
+| `click_source`                             | landing only: `google_ads` (`gclid`, `gbraid`, `wbraid`), `meta` (`fbclid`), `microsoft_ads` (`msclkid`), else `none`; `unknown` elsewhere |
+| `utm_source`, `utm_medium`, `utm_campaign` | landing only, lowercased; `null` when absent, over 100 characters or containing `@`                                                        |
+
+Click-id values are only tested for presence and never pushed. Nothing is stored:
+carrying the channel to a later page would need device storage, which needs the
+consent being measured, so a decision made after the landing page reports `unknown`.
 
 Forward these to a **cookieless** analytics tool. Analytics that consent switches off
 cannot report the visitor who switched it off, so a refusal measured there reads as

@@ -82,8 +82,45 @@ const config = {
     // condition, or consent_rejected disappears.
     let firstDecisionSent = false;
 
+    // Channel context rides on every consent push, computed from this page's URL
+    // and held nowhere: carrying it to a later page would need device storage,
+    // which needs the very consent being measured. GTM keeps a key for the whole
+    // page, so every push sets all five, null when not applicable. "Landing" is
+    // the page that showed the banner first in this session.
+    let shownHere = false;
+    let decidedHere = false;
+    let leftSent = false;
+
+    const CLICK_IDS: [string, string][] = [
+      ['gclid', 'google_ads'],
+      ['gbraid', 'google_ads'],
+      ['wbraid', 'google_ads'],
+      ['fbclid', 'meta'],
+      ['msclkid', 'microsoft_ads'],
+    ];
+
+    const cleanUtm = (value: string | null) => {
+      const v = value?.trim().toLowerCase();
+      return v && v.length <= 100 && !v.includes('@') ? v : null;
+    };
+
+    const landingContext = () => {
+      if (!shownHere) {
+        return { is_landing: false, click_source: 'unknown', utm_source: null, utm_medium: null, utm_campaign: null };
+      }
+      const q = new URLSearchParams(location.search);
+      const hit = CLICK_IDS.find(([key]) => q.has(key));
+      return {
+        is_landing: true,
+        click_source: hit ? hit[1] : 'none',
+        utm_source: cleanUtm(q.get('utm_source')),
+        utm_medium: cleanUtm(q.get('utm_medium')),
+        utm_campaign: cleanUtm(q.get('utm_campaign')),
+      };
+    };
+
     const track = (event: string) => {
-      window.dataLayer.push({ event });
+      window.dataLayer.push({ event, ...landingContext() });
     };
 
     // The banner reappears on every pageview until a decision is made, so the raw
@@ -198,10 +235,12 @@ const config = {
         if (modalName === 'preferencesModal') {
           track('consent_preferences_opened');
         } else if (oncePerSession('cc_shown')) {
+          shownHere = true;
           track('consent_banner_shown');
         }
       },
       onFirstConsent: () => {
+        decidedHere = true;
         syncConsent();
         // Guard in case a version fires onChange in the same call as onFirstConsent; the
         // first decision must not be counted twice. Cleared on the next microtask: 3.1.0
@@ -217,6 +256,14 @@ const config = {
         if (firstDecisionSent) return;
         track(CookieConsent.acceptedCategory('analytics') ? 'consent_accepted' : 'consent_revoked');
       },
+    });
+
+    // The undecided exit is only counted on the page that counted the impression,
+    // so shown = decided on that page + left undecided, up to unload loss.
+    window.addEventListener('pagehide', () => {
+      if (!shownHere || decidedHere || leftSent) return;
+      leftSent = true;
+      track('consent_banner_left_undecided');
     });
 
     // Lets a footer or a policy page reveal its "change preferences" control only
