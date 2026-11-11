@@ -94,3 +94,8 @@ test('does nothing when no config exists', async () => {
   assert.equal(toggles.length, 0);
   assert.equal(documentElement.dataset.cc, undefined);
 });
+
+test('built bundle reads cookieDomain and clears by cookie domain', () => {
+  assert.match(bundle, /\.cookieDomain/);
+  assert.match(bundle, /name:\s*new RegExp\((\w+)\.pattern\.source,\s*\1\.pattern\.flags\),\s*domain:\s*\1\.domain/);
+});

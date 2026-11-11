@@ -1,24 +1,6 @@
 import * as CookieConsent from 'vanilla-cookieconsent';
-import { shortDuration } from './cookie-inventory';
-import type { ConsentCopy } from './types';
-
-export interface CookieEntry {
-  name: string;
-  pattern: { source: string; flags: string };
-  vendor: string;
-  domain: string;
-  duration: { amount: number; unit: 'minute' | 'hour' | 'day' | 'year' };
-}
-
-export interface ConsentConfig {
-  lang: string;
-  policyUrl: string;
-  policyLabel: string;
-  darkClass: string;
-  banner: ConsentCopy['banner'];
-  preferences: ConsentCopy['preferences'];
-  cookies: CookieEntry[];
-}
+import { runOptions } from './run-options';
+import type { ConsentConfig } from './types';
 
 declare global {
   interface Window {
@@ -42,9 +24,6 @@ window.dataLayer ??= [];
 
 const cfg = readConfig(document, window);
 if (cfg) {
-  const p = cfg.preferences;
-  const cookies = cfg.cookies;
-
   // ConsentInit publishes this shim before the tag manager loads precisely so the
   // rest of the page shares one dataLayer contract. A second local copy would drift
   // the moment either side changed how it pushes.
@@ -137,79 +116,7 @@ if (cfg) {
     attributeFilter: ['class'],
   });
 
-  CookieConsent.run({
-    autoShow: true,
-    disablePageInteraction: false,
-    guiOptions: {
-      // Accept and reject stay equally weighted. Refusal has to be as easy as
-      // acceptance, and a banner that leans is not worth the measurement it buys.
-      consentModal: { layout: 'box inline', position: 'bottom left', equalWeightButtons: true },
-      preferencesModal: { layout: 'box', equalWeightButtons: true },
-    },
-    categories: {
-      necessary: { enabled: true, readOnly: true },
-      analytics: {
-        enabled: false,
-        autoClear: {
-          cookies: cookies.map((cookie) => ({
-            name: new RegExp(cookie.pattern.source, cookie.pattern.flags),
-          })),
-        },
-      },
-    },
-    language: {
-      default: cfg.lang,
-      translations: {
-        [cfg.lang]: {
-          consentModal: {
-            title: cfg.banner.title,
-            description: cfg.banner.description,
-            acceptAllBtn: cfg.banner.acceptAll,
-            acceptNecessaryBtn: cfg.banner.acceptNecessary,
-            showPreferencesBtn: cfg.banner.showPreferences,
-            footer: `<a href="${cfg.policyUrl}">${cfg.policyLabel}</a>`,
-          },
-          preferencesModal: {
-            title: p.title,
-            acceptAllBtn: p.acceptAll,
-            acceptNecessaryBtn: p.acceptNecessary,
-            savePreferencesBtn: p.savePreferences,
-            closeIconLabel: p.close,
-            serviceCounterLabel: p.serviceCounterLabel,
-            sections: [
-              {
-                title: p.intro.title,
-                description: `${p.intro.description} <a href="${cfg.policyUrl}">${cfg.policyLabel}</a>`,
-              },
-              {
-                title: p.necessary.title,
-                description: p.necessary.description,
-                linkedCategory: 'necessary',
-              },
-              {
-                title: p.analytics.title,
-                description: p.analytics.description,
-                linkedCategory: 'analytics',
-                cookieTable: {
-                  headers: {
-                    name: p.table.name,
-                    domain: p.table.domain,
-                    expiration: p.table.expiration,
-                    desc: p.table.description,
-                  },
-                  body: cookies.map((cookie) => ({
-                    name: cookie.name,
-                    domain: cookie.domain,
-                    expiration: shortDuration(cookie.duration),
-                    desc: cookie.vendor,
-                  })),
-                },
-              },
-            ],
-          },
-        },
-      },
-    },
+  CookieConsent.run(runOptions(cfg, {
     onModalShow: ({ modalName }) => {
       if (modalName === 'preferencesModal') {
         track('consent_preferences_opened');
@@ -235,7 +142,7 @@ if (cfg) {
       if (firstDecisionSent) return;
       track(CookieConsent.acceptedCategory('analytics') ? 'consent_accepted' : 'consent_revoked');
     },
-  });
+  }));
 
   // The undecided exit is only counted on the page that counted the impression,
   // so shown = decided on that page + left undecided, up to unload loss.

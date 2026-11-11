@@ -91,6 +91,28 @@ export const COOKIES: MeasurementCookie[] = [
 language. `formatDuration` and `shortDuration` render `duration` for prose and for the
 narrow table column.
 
+`domain` is also where withdrawal clears the cookie: autoClear erases each entry on
+its own `domain`. Without it the library would clear on the current hostname only,
+and a `_ga` written on `.example.com` would survive a withdrawal made on
+`blog.example.com`.
+
+### Sharing one decision across subdomains
+
+`cookieDomain` sets the domain of the consent cookie (`cc_cookie`). Unset, the library
+writes it with `Domain=` the current hostname. On `example.com` that already covers
+`blog.example.com`, but a decision made on `blog.example.com` is written for that host
+only, so `example.com` never sees it and asks again. Sites that share a
+parent domain and want one decision set it to that parent:
+
+```astro
+<ConsentBanner cookieDomain="example.com" ... />
+```
+
+Plain HTML sites put `cookieDomain: "example.com"` in `window.consentKitConfig`. A
+subdomain that leaves it unset writes a second cookie with the same name, and which of
+the two that page then reads is not defined. A shared cookie also means the sites share
+one policy, so the cookie list and the policy page should cover all of them.
+
 ### Theme
 
 `theme.css` reads a `--consent-*` contract with fallbacks for every value. Alias it to
@@ -129,6 +151,7 @@ Copy them next to the site, or load them from the installed package.
       policyUrl: "/cookie-policy",
       policyLabel: "Cookie Policy",
       darkClass: "dark",
+      cookieDomain: "example.com", // optional, see "Sharing one decision across subdomains"
       banner: { title: "...", description: "...", acceptAll: "...", acceptNecessary: "...", showPreferences: "..." },
       preferences: { /* same shape as ConsentCopy["preferences"] in types.ts */ },
       cookies: [

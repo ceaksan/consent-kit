@@ -23,15 +23,21 @@ interface Props {
    * site's own resolver owns the class.
    */
   darkClass?: string;
+  /**
+   * Domain for the consent cookie, for sites that share one decision across a parent
+   * domain and its subdomains. Unset, the cookie is written for the current hostname.
+   */
+  cookieDomain?: string;
 }
 
-const { lang, copy, policyUrl, policyLabel, cookies, darkClass = 'dark' } = Astro.props;
+const { lang, copy, policyUrl, policyLabel, cookies, darkClass = 'dark', cookieDomain } = Astro.props;
 
 const config = {
   lang,
   policyUrl,
   policyLabel,
   darkClass,
+  ...(cookieDomain ? { cookieDomain } : {}),
   banner: copy.banner,
   preferences: copy.preferences,
   cookies: cookies.map((cookie) => ({
