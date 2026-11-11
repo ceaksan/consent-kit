@@ -92,3 +92,13 @@ export function runOptions(cfg: ConsentConfig, callbacks: Callbacks): CookieCons
     ...callbacks,
   };
 }
+
+/**
+ * Plain HTML sites set window.consentKitConfig; the Astro component renders the
+ * #cc-config JSON element instead. The global wins when both exist.
+ */
+export function readConfig(doc: Document, win: Window): ConsentConfig | null {
+  if (win.consentKitConfig) return win.consentKitConfig;
+  const raw = doc.getElementById('cc-config')?.textContent;
+  return raw ? (JSON.parse(raw) as ConsentConfig) : null;
+}

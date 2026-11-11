@@ -2,6 +2,20 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import vm from 'node:vm';
 import { readFileSync } from 'node:fs';
+import { registerHooks } from 'node:module';
+
+registerHooks({
+  resolve(specifier, context, next) {
+    try {
+      return next(specifier, context);
+    } catch (error) {
+      if (specifier.startsWith('.') && !specifier.endsWith('.ts')) return next(`${specifier}.ts`, context);
+      throw error;
+    }
+  },
+});
+
+const { readConfig } = await import('../src/run-options.ts');
 
 // Runs the built bundle (npm run build first) against a permissive fake DOM.
 // Which config won is observable through darkClass: the runtime mirrors it onto
@@ -98,4 +112,16 @@ test('does nothing when no config exists', async () => {
 test('built bundle reads cookieDomain and clears by cookie domain', () => {
   assert.match(bundle, /\.cookieDomain/);
   assert.match(bundle, /name:\s*new RegExp\((\w+)\.pattern\.source,\s*\1\.pattern\.flags\),\s*domain:\s*\1\.domain/);
+});
+
+test('readConfig returns the window object itself when both sources exist', () => {
+  const fromWindow = config('night');
+  const doc = { getElementById: () => ({ textContent: JSON.stringify(config('dark')) }) };
+  assert.equal(readConfig(doc, { consentKitConfig: fromWindow }), fromWindow);
+});
+
+test('readConfig parses #cc-config when the window has none, and returns null with neither', () => {
+  const doc = { getElementById: () => ({ textContent: JSON.stringify(config('dark')) }) };
+  assert.deepEqual(readConfig(doc, {}), config('dark'));
+  assert.equal(readConfig({ getElementById: () => null }, {}), null);
 });

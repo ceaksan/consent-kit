@@ -1,5 +1,5 @@
 import * as CookieConsent from 'vanilla-cookieconsent';
-import { runOptions } from './run-options';
+import { readConfig, runOptions } from './run-options';
 import type { ConsentConfig } from './types';
 
 declare global {
@@ -8,16 +8,6 @@ declare global {
     gtag: (...args: unknown[]) => void;
     consentKitConfig?: ConsentConfig;
   }
-}
-
-/**
- * Plain HTML sites set window.consentKitConfig; the Astro component renders the
- * #cc-config JSON element instead. The global wins when both exist.
- */
-export function readConfig(doc: Document, win: Window): ConsentConfig | null {
-  if (win.consentKitConfig) return win.consentKitConfig;
-  const raw = doc.getElementById('cc-config')?.textContent;
-  return raw ? (JSON.parse(raw) as ConsentConfig) : null;
 }
 
 window.dataLayer ??= [];
