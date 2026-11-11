@@ -1,6 +1,6 @@
 {
   "name": "@ceaksan/consent-kit",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "description": "Google Consent Mode v2 banner for Astro sites: consent defaults before the tag manager, a cookie inventory the UI and the policy page share, and a theme driven by the host site's tokens.",
   "license": "MIT",
   "type": "module",
