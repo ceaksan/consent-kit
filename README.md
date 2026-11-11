@@ -109,6 +109,50 @@ the site's tokens:
 The banner mirrors the `dark` class on `<html>` onto the library's `cc--darkmode`.
 Pass `darkClass` if the site names it something else.
 
+## Plain HTML
+
+Sites without Astro use the files in `dist/` (run `npm run build` to regenerate them).
+Copy them next to the site, or load them from the installed package.
+
+```html
+<head>
+  <script src="/consent/consent-init.js"
+          data-ad-signals-always-denied="true"
+          data-wait-for-update="500"></script>
+  <!-- tag manager loader goes here, after consent-init.js -->
+  <link rel="stylesheet" href="/consent/consent-banner.css">
+</head>
+<body>
+  <script>
+    window.consentKitConfig = {
+      lang: "en",
+      policyUrl: "/cookie-policy",
+      policyLabel: "Cookie Policy",
+      darkClass: "dark",
+      banner: { title: "...", description: "...", acceptAll: "...", acceptNecessary: "...", showPreferences: "..." },
+      preferences: { /* same shape as ConsentCopy["preferences"] in types.ts */ },
+      cookies: [
+        {
+          name: "_ga",
+          pattern: { source: "^_ga$", flags: "" },
+          vendor: "Google Analytics 4",
+          domain: ".example.com",
+          duration: { amount: 2, unit: "year" }
+        }
+      ]
+    };
+  </script>
+  <script src="/consent/consent-banner.js" defer></script>
+</body>
+```
+
+`consent-init.js` is a classic script, not a module, and must precede the tag manager.
+`consent-banner.js` reads `window.consentKitConfig` first and falls back to a
+`<script type="application/json" id="cc-config">` element. `pattern` crosses as
+`source` plus `flags` because a RegExp does not survive JSON. The Astro components
+inline the same `consent-init.js` and run the same banner runtime, so both routes
+behave identically.
+
 ## Events
 
 | Event                           | When                                                                           |
