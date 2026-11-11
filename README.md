@@ -214,6 +214,21 @@ because the banner reappears on every pageview until a decision is made. Countin
 raw makes undecided browsing inflate the denominator, and the acceptance rate reads far
 worse than it is.
 
+## Testing from a host site
+
+The body of the `<script>` block in `ConsentBanner.astro` is not a contract. It is an
+import of `src/banner-runtime.ts` and may change shape in any release, so a test that
+slices it out of the component by text will break.
+
+Test against `dist/consent-banner.js` instead. It is the same runtime, bundled as a
+self-contained IIFE and exported as `@ceaksan/consent-kit/dist/consent-banner.js`.
+Read it from the installed package, set `window.consentKitConfig` (or the `#cc-config`
+element) in a fake DOM, and run it with `node:vm`. This package's own
+`test/banner-config.test.mjs` does exactly that and is a working starting point.
+
+`src/banner-runtime.ts` is not in `exports`, so importing it by package path does not
+resolve.
+
 ## License
 
 MIT
